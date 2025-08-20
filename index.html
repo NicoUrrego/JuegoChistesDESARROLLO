@@ -2,210 +2,23 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Grabadora de Audios</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f2f2f2;
-      padding: 30px;
-    }
-    h1 {
-      color: #333;
-    }
-    button {
-      background: #4CAF50;
-      border: none;
-      color: white;
-      padding: 10px 16px;
-      margin: 5px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: 0.3s;
-    }
-    button:hover {
-      opacity: 0.9;
-    }
-    .delete-btn {
-      background: #e74c3c;
-    }
-    #status {
-      margin-top: 20px;
-      font-weight: bold;
-      color: #555;
-    }
-    audio {
-      margin-top: 15px;
-      display: block;
-      width: 100%;
-    }
-    #list {
-      margin-top: 25px;
-      text-align: left;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-    .item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      padding: 8px;
-      border-bottom: 1px solid #eee;
-    }
-    .item span {
-      font-weight: bold;
-      color: #333;
-    }
-  </style>
+  <title>Grabadora Aleatoria</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🎙️ Grabadora de Audios</h1>
-  
-  <button id="startBtn">▶️ Iniciar Grabación</button>
-  <button id="stopBtn" disabled>⏹️ Detener Grabación</button>
-  <button id="playRandomBtn">🔀 Reproducir Aleatorio</button>
-  
-  <div id="status">Listo para grabar...</div>
-  
-  <audio id="player" controls></audio>
-  
-  <h2>📂 Mis Audios</h2>
-  <div id="list"></div>
-  
-  <script>
-    let mediaRecorder;
-    let audioChunks = [];
-    let recordings = []; // Guardamos blobs
-    const maxDuration = 15000; // 15 segundos
+  <h1>🎤 Grabadora Aleatoria</h1>
 
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const playRandomBtn = document.getElementById('playRandomBtn');
-    const statusEl = document.getElementById('status');
-    const player = document.getElementById('player');
-    const listEl = document.getElementById('list');
+  <button id="btnGrabar">🎙️ Grabar (15s máx)</button>
+  <button id="btnReproducir">🔊 Reproducir Aleatorio</button>
+  <button id="btnBorrarTodo">🗑️ Borrar todos los audios</button>
 
-    // Cargar audios guardados de localStorage
-    if(localStorage.getItem("audios")) {
-      recordings = JSON.parse(localStorage.getItem("audios")).map(b64 => b64toBlob(b64));
-      renderList();
-    }
+  <p id="estado">Estado: Esperando acción...</p>
 
-    startBtn.addEventListener('click', async () => {
-      let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
+  <audio id="reproductor" controls></audio>
 
-      audioChunks = [];
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  <h2>📂 Audios guardados</h2>
+  <ul id="listaAudios"></ul>
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-        recordings.push(blob);
-        saveRecordings();
-        renderList();
-        statusEl.textContent = "✅ Audio guardado correctamente";
-      };
-
-      mediaRecorder.start();
-      statusEl.textContent = "⏺️ Grabando... (máx. 15s)";
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-
-      // Detener automáticamente a los 15s
-      setTimeout(() => {
-        if (mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-          startBtn.disabled = false;
-          stopBtn.disabled = true;
-        }
-      }, maxDuration);
-    });
-
-    stopBtn.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      }
-    });
-
-    playRandomBtn.addEventListener('click', () => {
-      if (recordings.length === 0) {
-        statusEl.textContent = "⚠️ No hay audios guardados aún.";
-        return;
-      }
-      const randomIndex = Math.floor(Math.random() * recordings.length);
-      playAudio(recordings[randomIndex]);
-      statusEl.textContent = `🎵 Reproduciendo audio #${randomIndex + 1}`;
-    });
-
-    // Guardar audios en localStorage
-    function saveRecordings() {
-      const b64Audios = recordings.map(blob => blobToBase64(blob));
-      Promise.all(b64Audios).then(arr => {
-        localStorage.setItem("audios", JSON.stringify(arr));
-      });
-    }
-
-    // Renderizar lista de audios
-    function renderList() {
-      listEl.innerHTML = "";
-      recordings.forEach((blob, index) => {
-        const div = document.createElement("div");
-        div.className = "item";
-        div.innerHTML = `
-          <span>Audio ${index + 1}</span>
-          <div>
-            <button onclick="playAudio(recordings[${index}])">🎵 Reproducir</button>
-            <button class="delete-btn" onclick="deleteAudio(${index})">🗑️ Eliminar</button>
-          </div>
-        `;
-        listEl.appendChild(div);
-      });
-    }
-
-    // Reproducir audio
-    function playAudio(blob) {
-      const url = URL.createObjectURL(blob);
-      player.src = url;
-      player.play();
-    }
-
-    // Eliminar audio
-    function deleteAudio(index) {
-      recordings.splice(index, 1);
-      saveRecordings();
-      renderList();
-      statusEl.textContent = "🗑️ Audio eliminado.";
-    }
-
-    // Convertir Blob → Base64
-    function blobToBase64(blob) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    // Convertir Base64 → Blob
-    function b64toBlob(b64Data) {
-      const byteCharacters = atob(b64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      return new Blob([byteArray], { type: 'audio/webm' });
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
