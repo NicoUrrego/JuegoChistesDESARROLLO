@@ -1,0 +1,107 @@
+let mediaRecorder;
+let chunks = [];
+let audiosGuardados = JSON.parse(localStorage.getItem("audios")) || [];
+
+const btnGrabar = document.getElementById("btnGrabar");
+const btnReproducir = document.getElementById("btnReproducir");
+const btnBorrarTodo = document.getElementById("btnBorrarTodo");
+const estado = document.getElementById("estado");
+const reproductor = document.getElementById("reproductor");
+const listaAudios = document.getElementById("listaAudios");
+
+// 🔄 Actualizar lista en pantalla
+function actualizarLista() {
+  listaAudios.innerHTML = "";
+  audiosGuardados.forEach((audio, index) => {
+    const li = document.createElement("li");
+
+    const btnPlay = document.createElement("button");
+    btnPlay.textContent = "▶️ Reproducir";
+    btnPlay.addEventListener("click", () => {
+      reproductor.src = audio;
+      reproductor.play();
+      estado.textContent = `🎵 Reproduciendo audio ${index + 1}`;
+    });
+
+    const btnDelete = document.createElement("button");
+    btnDelete.textContent = "🗑️ Borrar";
+    btnDelete.addEventListener("click", () => {
+      audiosGuardados.splice(index, 1);
+      localStorage.setItem("audios", JSON.stringify(audiosGuardados));
+      actualizarLista();
+      estado.textContent = "❌ Audio borrado";
+    });
+
+    li.textContent = `Audio ${index + 1} `;
+    li.appendChild(btnPlay);
+    li.appendChild(btnDelete);
+    listaAudios.appendChild(li);
+  });
+
+  if (audiosGuardados.length === 0) {
+    listaAudios.innerHTML = "<li>No hay audios guardados</li>";
+  }
+}
+
+// 🎙️ Grabar audio
+btnGrabar.addEventListener("click", async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+
+    chunks = [];
+    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        audiosGuardados.push(reader.result);
+        localStorage.setItem("audios", JSON.stringify(audiosGuardados));
+        actualizarLista();
+        estado.textContent = "✅ Audio guardado";
+      };
+      reader.readAsDataURL(blob);
+    };
+
+    mediaRecorder.start();
+    estado.textContent = "🎙️ Grabando... (máx 15s)";
+
+    // Detener después de 15 segundos
+    setTimeout(() => {
+      if (mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        estado.textContent = "⏹️ Grabación finalizada";
+      }
+    }, 15000);
+
+  } catch (error) {
+    console.error(error);
+    estado.textContent = "❌ Error: No se pudo acceder al micrófono";
+  }
+});
+
+// 🔊 Reproducir audio aleatorio
+btnReproducir.addEventListener("click", () => {
+  if (audiosGuardados.length === 0) {
+    estado.textContent = "⚠️ No hay audios guardados";
+    return;
+  }
+  const randomIndex = Math.floor(Math.random() * audiosGuardados.length);
+  reproductor.src = audiosGuardados[randomIndex];
+  reproductor.play();
+  estado.textContent = `🎵 Reproduciendo audio aleatorio (#${randomIndex + 1})`;
+});
+
+// 🗑️ Borrar todos los audios
+btnBorrarTodo.addEventListener("click", () => {
+  if (confirm("¿Seguro que quieres borrar todos los audios?")) {
+    audiosGuardados = [];
+    localStorage.removeItem("audios");
+    actualizarLista();
+    estado.textContent = "🗑️ Todos los audios borrados";
+  }
+});
+
+// Inicializar lista al cargar
+actualizarLista();
