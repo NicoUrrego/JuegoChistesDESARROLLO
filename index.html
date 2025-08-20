@@ -7,7 +7,7 @@
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background: #f2f2f2;
+      background: #f9f9f9;
       padding: 30px;
     }
 
@@ -18,7 +18,7 @@
 
     button {
       padding: 12px 20px;
-      margin: 10px;
+      margin: 8px;
       font-size: 16px;
       border: none;
       border-radius: 8px;
@@ -26,29 +26,46 @@
       transition: 0.3s;
     }
 
-    #recordBtn {
-      background: #e74c3c;
-      color: white;
-    }
+    #recordBtn { background: #e74c3c; color: white; }
+    #stopBtn { background: #3498db; color: white; }
+    #randomBtn { background: #2ecc71; color: white; }
+    .deleteBtn { background: #e67e22; color: white; }
 
-    #stopBtn {
-      background: #3498db;
-      color: white;
-    }
-
-    #randomBtn {
-      background: #2ecc71;
-      color: white;
-    }
-
-    button:hover {
-      opacity: 0.8;
-    }
+    button:hover { opacity: 0.85; }
 
     #status {
       margin-top: 20px;
       font-weight: bold;
       color: #444;
+    }
+
+    audio {
+      margin: 10px 0;
+      width: 80%;
+    }
+
+    #audioList {
+      margin-top: 30px;
+      text-align: left;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .audioItem {
+      background: white;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .audioItem audio {
+      flex: 1;
+      margin-right: 10px;
     }
   </style>
 </head>
@@ -63,6 +80,8 @@
 
   <audio id="player" controls style="margin-top:20px; width:80%;"></audio>
 
+  <div id="audioList"></div>
+
   <script>
     let mediaRecorder;
     let audioChunks = [];
@@ -73,6 +92,38 @@
     const randomBtn = document.getElementById("randomBtn");
     const status = document.getElementById("status");
     const player = document.getElementById("player");
+    const audioList = document.getElementById("audioList");
+
+    // Mostrar audios guardados en la lista
+    function mostrarAudios() {
+      audioList.innerHTML = "<h2>📂 Audios Guardados</h2>";
+      if (audiosGuardados.length === 0) {
+        audioList.innerHTML += "<p>No hay audios guardados.</p>";
+        return;
+      }
+
+      audiosGuardados.forEach((audio, index) => {
+        const div = document.createElement("div");
+        div.className = "audioItem";
+
+        const audioElement = document.createElement("audio");
+        audioElement.controls = true;
+        audioElement.src = audio;
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "🗑️ Borrar";
+        deleteBtn.className = "deleteBtn";
+        deleteBtn.onclick = () => {
+          audiosGuardados.splice(index, 1);
+          localStorage.setItem("audios", JSON.stringify(audiosGuardados));
+          mostrarAudios();
+        };
+
+        div.appendChild(audioElement);
+        div.appendChild(deleteBtn);
+        audioList.appendChild(div);
+      });
+    }
 
     // Comenzar grabación
     recordBtn.addEventListener("click", async () => {
@@ -95,6 +146,7 @@
             audiosGuardados.push(base64data);
             localStorage.setItem("audios", JSON.stringify(audiosGuardados));
             status.textContent = "✅ Audio guardado";
+            mostrarAudios();
           };
         };
 
@@ -137,6 +189,9 @@
         status.textContent = "⚠️ No hay audios guardados";
       }
     });
+
+    // Mostrar audios al cargar la página
+    mostrarAudios();
   </script>
 </body>
 </html>
